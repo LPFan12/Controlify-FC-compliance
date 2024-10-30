@@ -1,16 +1,16 @@
-@file:Suppress("UnstableApiUsage")
-
 import net.fabricmc.loom.task.RemapJarTask
 import org.gradle.configurationcache.extensions.capitalized
 
 plugins {
     `java-library`
 
-    id("dev.architectury.loom")
-    id("dev.kikugie.j52j") version "1.0.2"
+    id("dev.architectury.loom") version "1.6.+"
+    id("dev.kikugie.j52j") version "1.0"
 
-    id("me.modmuss50.mod-publish-plugin")
+    id("me.modmuss50.mod-publish-plugin") version "0.5.+"
     `maven-publish`
+
+    id("org.ajoberstar.grgit") version "5.0.+"
 }
 
 // version stuff
@@ -55,7 +55,6 @@ loom {
         runConfigs.all {
             ideConfigGenerated(true)
             runDir("../../run")
-            vmArgs("-Dsodium.checks.issue2561=false")
         }
     }
 
@@ -72,16 +71,32 @@ loom {
 }
 
 stonecutter {
-    val sodiumSemver = findProperty("deps.sodiumSemver")?.toString() ?: "0.0.0"
     dependencies(
-        "fapi" to (findProperty("deps.fabricApi")?.toString() ?: "0.0.0"),
-        "sodium" to sodiumSemver
+        "fapi" to (findProperty("deps.fabricApi")?.toString() ?: "0.0.0")
     )
+}
 
-    swaps["sodium-package-import"] = if (eval(sodiumSemver, ">=0.6"))
-        "import net.caffeinemc.mods.sodium" else "import me.jellysquid.mods.sodium"
-    swaps["sodium-package"] = if (eval(sodiumSemver, ">=0.6"))
-        "net.caffeinemc.mods.sodium" else "me.jellysquid.mods.sodium"
+repositories {
+    mavenCentral()
+    maven("https://maven.terraformersmc.com")
+    maven("https://maven.isxander.dev/releases")
+    maven("https://maven.isxander.dev/snapshots")
+    maven("https://maven.parchmentmc.org")
+    maven("https://maven.quiltmc.org/repository/release")
+    exclusiveContent {
+        forRepository { maven("https://api.modrinth.com/maven") }
+        filter { includeGroup("maven.modrinth") }
+    }
+    exclusiveContent {
+        forRepository { maven("https://cursemaven.com") }
+        filter { includeGroup("curse.maven") }
+    }
+    exclusiveContent {
+        forRepository { maven("https://maven.flashyreese.me/releases") }
+        filter { includeGroup("me.flashyreese.mods") }
+    }
+    maven("https://jitpack.io")
+    maven("https://maven.neoforged.net/releases/")
 }
 
 dependencies {
@@ -96,19 +111,6 @@ dependencies {
 
         officialMojangMappings()
     })
-
-    optionalProp("deps.mixinExtras") {
-        if (isForgeLike) {
-            compileOnly(annotationProcessor("io.github.llamalad7:mixinextras-common:$it")!!)
-            if (isNeoforge) {
-                implementation(include("io.github.llamalad7:mixinextras-neoforge:$it")!!)
-            } else {
-                implementation(include("io.github.llamalad7:mixinextras-forge:$it")!!)
-            }
-        } else {
-            include(implementation(annotationProcessor("io.github.llamalad7:mixinextras-fabric:$it")!!)!!)
-        }
-    }
 
     fun modDependency(id: String, artifactGetter: (String) -> String, extra: (Boolean) -> Unit = {}) {
         optionalProp("deps.$id") {
@@ -142,6 +144,29 @@ dependencies {
         // so you can do `depends: fabric-api` in FMJ
         modRuntimeOnly("net.fabricmc.fabric-api:fabric-api:$fapiVersion")
 
+        // sodium compat
+        modDependency("sodium", { "maven.modrinth:sodium:$it" }) { runtime ->
+            if (runtime) {
+                listOf(
+                    "fabric-rendering-fluids-v1",
+                    "fabric-rendering-data-attachment-v1",
+                ).forEach { module ->
+                    modRuntimeOnly(fabricApi.module(module, fapiVersion))
+                }
+            }
+        }
+
+        // RSO compat
+        modDependency("reesesSodiumOptions", { "me.flashyreese.mods:reeses-sodium-options:$it" })
+
+        // iris compat
+        modDependency("iris", { "maven.modrinth:iris:$it" }) { runtime ->
+            if (runtime) {
+                modRuntimeOnly("org.anarres:jcpp:1.4.14")
+                modRuntimeOnly("io.github.douira:glsl-transformer:2.0.0-pre13")
+            }
+        }
+
         // mod menu compat
         modDependency("modMenu", { "com.terraformersmc:modmenu:$it" })
     } else if (isNeoforge) {
@@ -160,13 +185,9 @@ dependencies {
     api("dev.isxander:libsdl4j:${property("deps.sdl3Target")}-${property("deps.sdl34jBuild")}")
         .forgeRuntime().jij()
 
-    // steam deck bindings
-    api("dev.isxander:steamdeck4j:${property("deps.steamdeck4j")}")
-        .forgeRuntime().jij()
-
     // used to identify controller PID/VID when SDL is not available
     api("org.hid4java:hid4java:${property("deps.hid4java")}")
-        .forgeRuntime().jij()
+        .jij().forgeRuntime()
 
     // A json5 reader that hooks into gson
     listOf(
@@ -175,20 +196,6 @@ dependencies {
     ).forEach {
         api("org.quiltmc.parsers:$it:${property("deps.quiltParsers")}")
             .jij().forgeRuntime()
-    }
-
-    // sodium compat
-    modDependency("sodium", { "maven.modrinth:sodium:$it" })
-
-    // RSO compat
-    modDependency("reesesSodiumOptions", { "maven.modrinth:reeses-sodium-options:$it" })
-
-    // iris compat
-    modDependency("iris", { "maven.modrinth:iris:$it" }) { runtime ->
-        if (runtime) {
-            modRuntimeOnly("org.anarres:jcpp:1.4.14")
-            modRuntimeOnly("io.github.douira:glsl-transformer:2.0.0-pre13")
-        }
     }
 
     // immediately-fast compat
@@ -200,9 +207,6 @@ dependencies {
 
     // simple-voice-chat compat
     modDependency("simpleVoiceChat", { "maven.modrinth:simple-voice-chat:$it" })
-
-    // fancy menu compat
-    modDependency("fancyMenu", { "maven.modrinth:fancymenu:$it" })
 }
 
 tasks {
@@ -224,7 +228,7 @@ tasks {
 
             if (isFabric) {
                 put("mc", findProperty("fmj.mcDep"))
-                put("mixins", mixins.joinToString("\",\""))
+                put("mixins", mixins.joinToString("\",\"", prefix = "\"", postfix = "\""))
                 put("fapi", findProperty("fmj.fapiDep") ?: "*")
             }
 
@@ -249,7 +253,7 @@ tasks {
         )
         val modMetadataFile = when {
             isFabric -> fabricModJson
-            isNeoforge && stonecutter.eval(stonecutter.current.version, ">=1.20.5") -> neoforgeModsToml
+            isNeoforge && Version(stonecutter.current.version) >= Version("1.20.5") -> neoforgeModsToml
             isForgeLike -> modsToml
             else -> error("Unknown loader")
         }
@@ -268,18 +272,14 @@ tasks {
         }
     }
 
-    register("releaseModVersion") {
+    register("releaseMod") {
         group = "mod"
 
         dependsOn("publishMods")
-
-        if (!project.publishMods.dryRun.get()) {
-            dependsOn("publish")
-        }
+        dependsOn("publish")
     }
 }
 
-// Builds a jar that bundles all required natives for use offline, or when servers go down.
 val offlineRemapJar by tasks.registering(RemapJarTask::class) {
     group = "offline"
 
@@ -314,15 +314,23 @@ tasks.withType<JavaCompile> {
 }
 
 publishMods {
-    from(rootProject.publishMods)
-    dryRun.set(rootProject.publishMods.dryRun)
+    displayName.set("Controlify $versionWithoutMC for ${loader.capitalized()} $mcVersion")
 
     file.set(tasks.remapJar.get().archiveFile)
     additionalFiles.setFrom(offlineRemapJar.get().archiveFile)
 
+    changelog.set(
+        rootProject.file("changelog.md")
+            .takeIf { it.exists() }
+            ?.readText()
+            ?: "No changelog provided."
+    )
+    type.set(when {
+        isAlpha -> ALPHA
+        isBeta -> BETA
+        else -> STABLE
+    })
     modLoaders.add(loader)
-
-    displayName.set("$versionWithoutMC for $loader $mcVersion")
 
     fun versionList(prop: String) = findProperty(prop)?.toString()
         ?.split(',')
@@ -340,8 +348,6 @@ publishMods {
             minecraftVersions.addAll(stableMCVersions)
             minecraftVersions.addAll(versionList("pub.modrinthMC"))
 
-            announcementTitle = "Download $mcVersion for ${loader.capitalized()} from Modrinth"
-
             requires { slug.set("yacl") }
 
             if (isFabric) {
@@ -354,13 +360,10 @@ publishMods {
     val curseforgeId: String by project
     if (curseforgeId.isNotBlank() && hasProperty("curseforge.token")) {
         curseforge {
-            projectId = curseforgeId
-            projectSlug = findProperty("curseforgeSlug")!!.toString()
-            accessToken = findProperty("curseforge.token")?.toString()
+            projectId.set(curseforgeId)
+            accessToken.set(findProperty("curseforge.token")?.toString())
             minecraftVersions.addAll(stableMCVersions)
             minecraftVersions.addAll(versionList("pub.curseMC"))
-
-            announcementTitle = "Download $mcVersion for ${loader.capitalized()} from CurseForge"
 
             requires { slug.set("yacl") }
 
@@ -374,10 +377,9 @@ publishMods {
     val githubProject: String by project
     if (githubProject.isNotBlank() && hasProperty("github.token")) {
         github {
-            accessToken = findProperty("github.token")?.toString()
-
-            // will upload files to this parent task
-            parent(rootProject.tasks.named("publishGithub"))
+            repository.set(githubProject)
+            accessToken.set(findProperty("github.token")?.toString())
+            commitish.set(grgit.branch.current().name)
         }
     }
 }
@@ -415,4 +417,8 @@ fun <T> optionalProp(property: String, block: (String) -> T?) {
 
 fun isPropDefined(property: String): Boolean {
     return findProperty(property)?.toString()?.isNotBlank() ?: false
+}
+
+data class Version(val string: String) {
+    operator fun compareTo(other: Version): Int = stonecutter.compare(string, other.string)
 }
