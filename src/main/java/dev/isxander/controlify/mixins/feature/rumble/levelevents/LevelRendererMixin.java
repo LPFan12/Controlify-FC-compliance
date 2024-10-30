@@ -7,7 +7,7 @@ import dev.isxander.controlify.rumble.RumbleEffect;
 import dev.isxander.controlify.rumble.RumbleSource;
 import dev.isxander.controlify.rumble.RumbleState;
 import dev.isxander.controlify.utils.Easings;
-import net.minecraft.client.renderer.*;
+import net.minecraft.client.renderer.LevelRenderer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.block.LevelEvent;
 import org.spongepowered.asm.mixin.Mixin;
@@ -16,13 +16,7 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-@Mixin(
-        //? if >=1.21.2 {
-        LevelEventHandler.class
-        //?} else {
-        /*LevelRenderer.class
-        *///?}
-)
+@Mixin(LevelRenderer.class)
 public class LevelRendererMixin {
     @Inject(method = "levelEvent", at = @At("HEAD"))
     private void onLevelEvent(int eventId, BlockPos pos, int data, CallbackInfo ci) {

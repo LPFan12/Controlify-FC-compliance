@@ -28,39 +28,17 @@ import java.util.function.Function;
 public abstract class MinecraftMixin implements InitialScreenRegistryDuck {
     @Shadow public abstract void setScreen(@Nullable Screen screen);
 
-    //? if >=1.21.2 {
-    @Shadow public abstract net.minecraft.client.DeltaTracker getDeltaTracker();
-    //?} elif >1.20.6 {
-    /*@Shadow public abstract net.minecraft.client.DeltaTracker getTimer();
-
-    @Unique
-    public net.minecraft.client.DeltaTracker getDeltaTracker() {
-        return getTimer();
-    }
-    *///?} else {
+    //? if >1.20.6 {
+    @Shadow public abstract net.minecraft.client.DeltaTracker getTimer();
+    //?} else {
     /*@Shadow public abstract float getDeltaFrameTime();
     *///?}
 
     @Shadow @Final public MouseHandler mouseHandler;
     @Shadow @Nullable public Screen screen;
 
-    //? if >1.20.1 {
     @Shadow
     public abstract void emergencySaveAndCrash(CrashReport crashReport);
-    //?} else {
-    /*@Shadow
-    public abstract void emergencySave();
-
-    @Shadow
-    public abstract CrashReport fillReport(CrashReport theCrash);
-
-    @Unique
-    private void emergencySaveAndCrash(CrashReport crashReport) {
-        CrashReport filled = this.fillReport(crashReport);
-        emergencySave();
-        Minecraft.crash(filled);
-    }
-    *///?}
 
     @Unique private final List<Function<Runnable, Screen>> initialScreenCallbacks = new ArrayList<>();
     @Unique private boolean initialScreensHappened = false;
@@ -139,7 +117,7 @@ public abstract class MinecraftMixin implements InitialScreenRegistryDuck {
     @Unique
     private float getTickDelta() {
         /*? if >1.20.6 {*/
-        return getDeltaTracker().getGameTimeDeltaTicks();
+        return getTimer().getGameTimeDeltaTicks();
         /*?} else {*/
         /*return getDeltaFrameTime();
         *//*?}*/
