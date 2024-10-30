@@ -1,7 +1,6 @@
 package dev.isxander.controlify.utils;
 
 import com.mojang.math.Divisor;
-import dev.isxander.controlify.utils.render.Blit;
 import it.unimi.dsi.fastutil.ints.IntIterator;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.resources.ResourceLocation;
@@ -45,9 +44,9 @@ public final class FakeSpriteRenderer {
         topSliceHeight = Math.min(topSliceHeight, height / 2);
         bottomSliceHeight = Math.min(bottomSliceHeight, height / 2);
         if (width == uWidth && height == vHeight) {
-            Blit.blitTex(graphics, atlasLocation, x, y, textureX, textureY, width, height, atlasWidth, atlasHeight);
+            graphics.blit(atlasLocation, x, y, textureX, textureY, width, height, atlasWidth, atlasHeight);
         } else if (height == vHeight) {
-            Blit.blitTex(graphics, atlasLocation, x, y, textureX, textureY, leftSliceWidth, height, atlasWidth, atlasHeight);
+            graphics.blit(atlasLocation, x, y, textureX, textureY, leftSliceWidth, height, atlasWidth, atlasHeight);
             blitRepeating(
                     graphics,
                     atlasLocation,
@@ -62,9 +61,9 @@ public final class FakeSpriteRenderer {
                     atlasWidth,
                     atlasHeight
             );
-            Blit.blitTex(graphics, atlasLocation, x + width - rightSliceWidth, y, textureX + uWidth - rightSliceWidth, textureY, rightSliceWidth, height, atlasWidth, atlasHeight);
+            graphics.blit(atlasLocation, x + width - rightSliceWidth, y, textureX + uWidth - rightSliceWidth, textureY, rightSliceWidth, height, atlasWidth, atlasHeight);
         } else if (width == uWidth) {
-            Blit.blitTex(graphics, atlasLocation, x, y, textureX, textureY, width, topSliceHeight,atlasWidth, atlasHeight);
+            graphics.blit(atlasLocation, x, y, textureX, textureY, width, topSliceHeight,atlasWidth, atlasHeight);
             blitRepeating(
                     graphics,
                     atlasLocation,
@@ -79,9 +78,9 @@ public final class FakeSpriteRenderer {
                     atlasWidth,
                     atlasHeight
             );
-            Blit.blitTex(graphics, atlasLocation, x, y + height - bottomSliceHeight, textureX, textureY + vHeight - bottomSliceHeight, width, bottomSliceHeight, atlasWidth, atlasHeight);
+            graphics.blit(atlasLocation, x, y + height - bottomSliceHeight, textureX, textureY + vHeight - bottomSliceHeight, width, bottomSliceHeight, atlasWidth, atlasHeight);
         } else {
-            Blit.blitTex(graphics, atlasLocation, x, y, textureX, textureY, leftSliceWidth, topSliceHeight, atlasWidth, atlasHeight);
+            graphics.blit(atlasLocation, x, y, textureX, textureY, leftSliceWidth, topSliceHeight, atlasWidth, atlasHeight);
             blitRepeating(
                     graphics,
                     atlasLocation,
@@ -96,8 +95,8 @@ public final class FakeSpriteRenderer {
                     atlasWidth,
                     atlasHeight
             );
-            Blit.blitTex(graphics, atlasLocation, x + width - rightSliceWidth, y, textureX + uWidth - rightSliceWidth, textureY, rightSliceWidth, topSliceHeight, atlasWidth, atlasHeight);
-            Blit.blitTex(graphics, atlasLocation, x, y + height - bottomSliceHeight, textureX, textureY + vHeight - bottomSliceHeight, leftSliceWidth, bottomSliceHeight, atlasWidth, atlasHeight);
+            graphics.blit(atlasLocation, x + width - rightSliceWidth, y, textureX + uWidth - rightSliceWidth, textureY, rightSliceWidth, topSliceHeight, atlasWidth, atlasHeight);
+            graphics.blit(atlasLocation, x, y + height - bottomSliceHeight, textureX, textureY + vHeight - bottomSliceHeight, leftSliceWidth, bottomSliceHeight, atlasWidth, atlasHeight);
             blitRepeating(
                     graphics,
                     atlasLocation,
@@ -112,8 +111,7 @@ public final class FakeSpriteRenderer {
                     atlasWidth,
                     atlasHeight
             );
-            Blit.blitTex(
-                    graphics,
+            graphics.blit(
                     atlasLocation,
                     x + width - rightSliceWidth,
                     y + height - bottomSliceHeight,
@@ -182,7 +180,7 @@ public final class FakeSpriteRenderer {
             for(IntIterator intIterator2 = slices(height, sourceHeight); intIterator2.hasNext(); l += m) {
                 m = intIterator2.nextInt();
                 int n = (sourceHeight - m) / 2;
-                Blit.blitTex(graphics, atlasLocation, i, l, uOffset + k, vOffset + n, j, m, atlasWidth, atlasHeight);
+                graphics.blit(atlasLocation, i, l, uOffset + k, vOffset + n, j, m, atlasWidth, atlasHeight);
             }
         }
     }

@@ -18,8 +18,6 @@ import dev.isxander.controlify.controller.rumble.RumbleComponent;
 import dev.isxander.controlify.controllermanager.ControllerManager;
 import dev.isxander.controlify.controllermanager.GLFWControllerManager;
 import dev.isxander.controlify.controllermanager.SDLControllerManager;
-import dev.isxander.controlify.driver.steamdeck.SteamDeckMode;
-import dev.isxander.controlify.driver.steamdeck.SteamDeckUtil;
 import dev.isxander.controlify.font.InputFontMapper;
 import dev.isxander.controlify.gui.screen.*;
 import dev.isxander.controlify.driver.SDL3NativesManager;
@@ -42,8 +40,6 @@ import dev.isxander.controlify.sound.ControlifyClientSounds;
 import dev.isxander.controlify.utils.*;
 import dev.isxander.controlify.virtualmouse.VirtualMouseHandler;
 import dev.isxander.controlify.wireless.LowBatteryNotifier;
-import dev.isxander.deckapi.api.SteamDeck;
-import dev.isxander.yacl3.gui.YACLScreen;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.PauseScreen;
 import net.minecraft.client.multiplayer.ServerData;
@@ -51,7 +47,6 @@ import net.minecraft.network.chat.Component;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;
-import org.spongepowered.asm.mixin.MixinEnvironment;
 
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
@@ -106,10 +101,6 @@ public class Controlify implements ControlifyApi {
         DebugProperties.printProperties();
 
         CUtil.LOGGER.info("Pre-initializing Controlify...");
-
-        if (DebugProperties.MIXIN_AUDIT) {
-            MixinEnvironment.getCurrentEnvironment().audit();
-        }
 
         this.inGameInputHandler = null; // set when the current controller changes
         this.virtualMouseHandler = new VirtualMouseHandler();
@@ -201,7 +192,7 @@ public class Controlify implements ControlifyApi {
             }
         });
 
-        if (config().globalSettings().isQuietMode()) {
+        if (config().globalSettings().quietMode) {
             // Use GLFW to probe for controllers without asking for natives
             boolean controllersConnected = GLFWControllerManager.areControllersConnected();
 
@@ -226,34 +217,6 @@ public class Controlify implements ControlifyApi {
 
         // register events
         PlatformClientUtil.registerClientStopping(client -> this.controllerHIDService().stop());
-
-        if (this.config().globalSettings().useEnhancedSteamDeckDriver) {
-            doSteamDeckChecks();
-        }
-    }
-
-    private void doSteamDeckChecks() {
-        CUtil.LOGGER.info("Steam Deck state: {}", SteamDeckUtil.DECK_MODE);
-
-        if (!SteamDeckUtil.IS_STEAM_DECK) {
-            return;
-        }
-
-        boolean connectedToCef = SteamDeckUtil.getDeckInstance().isPresent();
-
-        if (!connectedToCef) {
-            CUtil.LOGGER.error("Controlify could not connect to CEF debugger instance. Decky is probably not installed.");
-            InitialScreenRegistryDuck.registerInitialScreen(SteamDeckAlerts::createDeckyRequiredWarning);
-        }
-
-        if (SteamDeckUtil.DECK_MODE == SteamDeckMode.DESKTOP_MODE) {
-            CUtil.LOGGER.warn("Controlify is running in SteamOS desktop mode.");
-            InitialScreenRegistryDuck.registerInitialScreen(SteamDeckAlerts::createDesktopModeWarning);
-        }
-
-        if (connectedToCef && SteamDeckUtil.DECK_MODE == SteamDeckMode.GAMING_MODE) {
-            CUtil.LOGGER.info("Steam Deck is in gaming mode and Controlify has successfully connected to CEF.");
-        }
     }
 
     /**
@@ -345,7 +308,7 @@ public class Controlify implements ControlifyApi {
 
             // assume that if someone explicitly went into controlify settings,
             // they have a controller and want the full experience.
-            if (config().globalSettings().isQuietMode()) {
+            if (config().globalSettings().quietMode) {
                 config().globalSettings().quietMode = false;
                 config().setDirty();
             }
@@ -565,10 +528,7 @@ public class Controlify implements ControlifyApi {
         ControllerStateView state = input.stateNow();
         Optional<RumbleManager> rumbleManager = controller.rumble().map(RumbleComponent::rumbleManager);
 
-        boolean isPaused = minecraft.isPaused() || minecraft.screen instanceof PauseScreen;
-        boolean isConfigScreen = minecraft.screen instanceof YACLScreen;
-
-        rumbleManager.ifPresent(rumble -> rumble.setSilent(outOfFocus || (isPaused && !isConfigScreen)));
+        rumbleManager.ifPresent(rumble -> rumble.setSilent(outOfFocus || minecraft.isPaused() || minecraft.screen instanceof PauseScreen));
         if (outOfFocus) {
             state = ControllerState.EMPTY;
         } else {
@@ -578,15 +538,10 @@ public class Controlify implements ControlifyApi {
         boolean givingInput = state.getButtons().stream().anyMatch(state::isButtonDown)
                 || state.getAxes().stream().map(state::getAxisState).anyMatch(axis -> Math.abs(axis) > 0.1f)
                 || state.getHats().stream().map(state::getHatState).anyMatch(hat -> hat != HatState.CENTERED);
-        if (givingInput) {
-            //? if >=1.21.2
-            minecraft.getFramerateLimitTracker().onInputReceived();
+        if (givingInput && !this.currentInputMode().isController()) {
+            this.setInputMode(input.confObj().mixedInput ? InputMode.MIXED : InputMode.CONTROLLER);
 
-            if (!this.currentInputMode().isController()) {
-                this.setInputMode(input.confObj().mixedInput ? InputMode.MIXED : InputMode.CONTROLLER);
-
-                return; // don't process input if this is changing mode.
-            }
+            return; // don't process input if this is changing mode.
         }
 
         if (consecutiveInputSwitches > 100) {
@@ -601,11 +556,10 @@ public class Controlify implements ControlifyApi {
             return;
         }
 
-        if (minecraft.level != null) {
-            this.inGameInputHandler().ifPresent(InGameInputHandler::inputTick);
-        }
-
-        if (this.currentInputMode().isController()) {
+        if (this.currentInputMode().isController()) { // only process input if in correct input mode
+            if (minecraft.level != null) {
+                this.inGameInputHandler().ifPresent(InGameInputHandler::inputTick);
+            }
             if (minecraft.screen != null) {
                 ScreenProcessorProvider.provide(minecraft.screen).onControllerUpdate(controller);
             }

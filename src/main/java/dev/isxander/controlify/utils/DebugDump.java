@@ -77,7 +77,9 @@ public class DebugDump {
                 dump.line("Trigger rumble supported: ", controller.triggerRumble().isPresent());
                 dump.line("Battery level: ", controller.batteryLevel().map(b -> b.getBatteryLevel().toString()).orElse("UNSUPPORTED"));
                 dump.line("Gyro supported: ", controller.gyro().isPresent());
-                dump.line("Touchpads supported: ", controller.touchpad().map(touchpad -> touchpad.touchpads().length).orElse(0));
+                controller.touchpad().ifPresentOrElse(touchpad -> {
+                    dump.line("Touchpads max fingers: ", touchpad.getMaxFingers());
+                }, () -> dump.line("Touchpads: UNSUPPORTED"));
                 dump.line("HD haptics supported: ", controller.hdHaptics().isPresent());
 
                 dump.line();

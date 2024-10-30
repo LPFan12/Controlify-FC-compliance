@@ -18,15 +18,7 @@ public final class ExtraRenderTypes extends RenderType {
                     false, false,
                     RenderType.CompositeState.builder()
                             .setShaderState(POSITION_TEX_SHADER)
-                            .setTextureState(new TextureStateShard(
-                                    atlas,
-                                    //? if >=1.21.2 {
-                                    net.minecraft.util.TriState.FALSE,
-                                    //?} else {
-                                    /*false,
-                                    *///?}
-                                    false
-                            ))
+                            .setTextureState(new TextureStateShard(atlas, false, false))
                             .setDepthTestState(LEQUAL_DEPTH_TEST)
                             .setTransparencyState(TRANSLUCENT_TRANSPARENCY)
                             .createCompositeState(false)

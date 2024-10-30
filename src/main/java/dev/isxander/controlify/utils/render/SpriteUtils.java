@@ -1,5 +1,6 @@
 package dev.isxander.controlify.utils.render;
 
+import dev.isxander.controlify.mixins.core.GuiGraphicsAccessor;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.resources.ResourceLocation;
 import org.joml.Matrix4f;
@@ -16,17 +17,17 @@ public class SpriteUtils {
     }
 
     public static void rect(GuiGraphics graphics, ResourceLocation atlasLocation, int x1, int x2, int y1, int y2, float minU, float maxU, float minV, float maxV) {
-        Blit.drawSpecial(graphics, bufferSource -> {
-            ControlifyVertexConsumer vertexConsumer = ControlifyVertexConsumer.of(
-                    bufferSource.getBuffer(ExtraRenderTypes.BLIT_TEXTURE.apply(atlasLocation))
-            );
-            Matrix4f pose = graphics.pose().last().pose();
+        ControlifyVertexConsumer vertexConsumer = ControlifyVertexConsumer.of(
+                graphics.bufferSource().getBuffer(ExtraRenderTypes.BLIT_TEXTURE.apply(atlasLocation))
+        );
+        Matrix4f pose = graphics.pose().last().pose();
 
-            vertexConsumer.vertex(pose, x1, y1, 0).uv(minU, minV).endVertex();
-            vertexConsumer.vertex(pose, x1, y2, 0).uv(minU, maxV).endVertex();
-            vertexConsumer.vertex(pose, x2, y2, 0).uv(maxU, maxV).endVertex();
-            vertexConsumer.vertex(pose, x2, y1, 0).uv(maxU, minV).endVertex();
-        });
+        vertexConsumer.vertex(pose, x1, y1, 0).uv(minU, minV).endVertex();
+        vertexConsumer.vertex(pose, x1, y2, 0).uv(minU, maxV).endVertex();
+        vertexConsumer.vertex(pose, x2, y2, 0).uv(maxU, maxV).endVertex();
+        vertexConsumer.vertex(pose, x2, y1, 0).uv(maxU, minV).endVertex();
+
+        ((GuiGraphicsAccessor) graphics).invokeFlushIfUnmanaged();
     }
 
     public static void sprite(GuiGraphics graphics, ControlifySprite sprite, int x, int y, int width, int height) {

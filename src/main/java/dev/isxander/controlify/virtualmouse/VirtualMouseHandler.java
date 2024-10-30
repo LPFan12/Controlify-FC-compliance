@@ -12,14 +12,17 @@ import dev.isxander.controlify.controller.*;
 import dev.isxander.controlify.controller.input.GamepadInputs;
 import dev.isxander.controlify.controller.input.InputComponent;
 import dev.isxander.controlify.controller.touchpad.TouchpadComponent;
+import dev.isxander.controlify.controller.touchpad.TouchpadState;
 import dev.isxander.controlify.debug.DebugProperties;
 import dev.isxander.controlify.screenop.ScreenProcessor;
 import dev.isxander.controlify.screenop.ScreenProcessorProvider;
 import dev.isxander.controlify.api.event.ControlifyEvents;
 import dev.isxander.controlify.mixins.feature.virtualmouse.KeyboardHandlerAccessor;
 import dev.isxander.controlify.mixins.feature.virtualmouse.MouseHandlerAccessor;
-import dev.isxander.controlify.utils.*;
-import dev.isxander.controlify.utils.render.Blit;
+import dev.isxander.controlify.utils.CUtil;
+import dev.isxander.controlify.utils.ControllerUtils;
+import dev.isxander.controlify.utils.HoldRepeatHelper;
+import dev.isxander.controlify.utils.ToastUtils;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.navigation.ScreenAxis;
@@ -32,6 +35,7 @@ import org.lwjgl.glfw.GLFW;
 
 import java.lang.Math;
 import java.util.Comparator;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
@@ -76,23 +80,22 @@ public class VirtualMouseHandler {
         InputComponent input = controller.input().orElseThrow();
         Optional<TouchpadComponent> touchpad = controller.touchpad();
 
-        // TODO: re-enable touchpad support
-//        List<Touchpads.Finger> fingerDeltas = touchpad.map(state -> ControllerUtils.deltaFingers(
-//                state.(),
-//                state.fingersThen()
-//        )).orElse(List.of());
-//
-//        float xImpulseFinger = 0;
-//        float yImpulseFinger = 0;
-//        if (!fingerDeltas.isEmpty()) {
-//            TouchpadState.Finger finger = fingerDeltas.get(0);
-//            xImpulseFinger = finger.position().x();
-//            yImpulseFinger = finger.position().y();
-//
-//            // finger pos is in range 0-1, so we need to scale it up loads
-//            xImpulseFinger *= 20;
-//            yImpulseFinger *= 20;
-//        }
+        List<TouchpadState.Finger> fingerDeltas = touchpad.map(state -> ControllerUtils.deltaFingers(
+                state.fingersNow(),
+                state.fingersThen()
+        )).orElse(List.of());
+
+        float xImpulseFinger = 0;
+        float yImpulseFinger = 0;
+        if (!fingerDeltas.isEmpty()) {
+            TouchpadState.Finger finger = fingerDeltas.get(0);
+            xImpulseFinger = finger.position().x();
+            yImpulseFinger = finger.position().y();
+
+            // finger pos is in range 0-1, so we need to scale it up loads
+            xImpulseFinger *= 20;
+            yImpulseFinger *= 20;
+        }
 
         InputBinding moveRight = ControlifyBindings.VMOUSE_MOVE_RIGHT.on(controller);
         InputBinding moveLeft = ControlifyBindings.VMOUSE_MOVE_LEFT.on(controller);
@@ -112,14 +115,14 @@ public class VirtualMouseHandler {
                 x -> (float) Math.pow(x, 3)
         );
 
-//        Vector2f fingerImpulse = ControllerUtils.applyEasingToLength(xImpulseFinger, yImpulseFinger, x -> (float) Math.pow(x, 1.5));
-//        Vector2f prevFingerImpulse = ControllerUtils.applyEasingToLength(prevXFinger, prevYFinger, x -> (float) Math.pow(x, 1.5));
+        Vector2f fingerImpulse = ControllerUtils.applyEasingToLength(xImpulseFinger, yImpulseFinger, x -> (float) Math.pow(x, 1.5));
+        Vector2f prevFingerImpulse = ControllerUtils.applyEasingToLength(prevXFinger, prevYFinger, x -> (float) Math.pow(x, 1.5));
 
-//        impulse.add(fingerImpulse);
-//        prevImpulse.add(prevFingerImpulse);
-//
-//        prevXFinger = xImpulseFinger;
-//        prevYFinger = yImpulseFinger;
+        impulse.add(fingerImpulse);
+        prevImpulse.add(prevFingerImpulse);
+
+        prevXFinger = xImpulseFinger;
+        prevYFinger = yImpulseFinger;
 
         if (minecraft.screen != null && minecraft.screen instanceof ISnapBehaviour snapBehaviour) {
             snapPoints = snapBehaviour.getSnapPoints();
@@ -175,21 +178,21 @@ public class VirtualMouseHandler {
         var mouseHandler = (MouseHandlerAccessor) minecraft.mouseHandler;
         var keyboardHandler = (KeyboardHandlerAccessor) minecraft.keyboardHandler;
 
-//        Optional<TouchpadComponent> touchpad = controller.touchpad();
-//        List<TouchpadState.Finger> touchpadState = touchpad.map(TouchpadComponent::fingersNow).orElse(List.of());
-//        List<TouchpadState.Finger> prevTouchpadState = touchpad.map(TouchpadComponent::fingersThen).orElse(List.of());
+        Optional<TouchpadComponent> touchpad = controller.touchpad();
+        List<TouchpadState.Finger> touchpadState = touchpad.map(TouchpadComponent::fingersNow).orElse(List.of());
+        List<TouchpadState.Finger> prevTouchpadState = touchpad.map(TouchpadComponent::fingersThen).orElse(List.of());
 
         InputComponent input = controller.input().orElseThrow();
-        boolean touchpadPressed = input.stateNow().isButtonDown(GamepadInputs.TOUCHPAD_1_BUTTON);
-        boolean prevTouchpadPressed = input.stateThen().isButtonDown(GamepadInputs.TOUCHPAD_1_BUTTON);
+        boolean touchpadPressed = input.stateNow().isButtonDown(GamepadInputs.TOUCHPAD_BUTTON);
+        boolean prevTouchpadPressed = input.stateThen().isButtonDown(GamepadInputs.TOUCHPAD_BUTTON);
 
-        if (ControlifyBindings.VMOUSE_LCLICK.on(controller).justPressed() || (touchpadPressed && !prevTouchpadPressed/* && touchpadState.size() == 1*/)) {
+        if (ControlifyBindings.VMOUSE_LCLICK.on(controller).justPressed() || (touchpadPressed && !prevTouchpadPressed && touchpadState.size() == 1)) {
             mouseHandler.invokeOnPress(minecraft.getWindow().getWindow(), GLFW.GLFW_MOUSE_BUTTON_LEFT, GLFW.GLFW_PRESS, 0);
         } else if (ControlifyBindings.VMOUSE_LCLICK.on(controller).justReleased() || (!touchpadPressed && prevTouchpadPressed)) {
             mouseHandler.invokeOnPress(minecraft.getWindow().getWindow(), GLFW.GLFW_MOUSE_BUTTON_LEFT, GLFW.GLFW_RELEASE, 0);
         }
 
-        if (ControlifyBindings.VMOUSE_RCLICK.on(controller).justPressed() || (touchpadPressed && !prevTouchpadPressed/* && touchpadState.size() == 2*/)) {
+        if (ControlifyBindings.VMOUSE_RCLICK.on(controller).justPressed() || (touchpadPressed && !prevTouchpadPressed && touchpadState.size() == 2)) {
             mouseHandler.invokeOnPress(minecraft.getWindow().getWindow(), GLFW.GLFW_MOUSE_BUTTON_RIGHT, GLFW.GLFW_PRESS, 0);
         } else if (ControlifyBindings.VMOUSE_RCLICK.on(controller).justReleased() || (!touchpadPressed && prevTouchpadPressed)) {
             mouseHandler.invokeOnPress(minecraft.getWindow().getWindow(), GLFW.GLFW_MOUSE_BUTTON_RIGHT, GLFW.GLFW_RELEASE, 0);
@@ -204,13 +207,11 @@ public class VirtualMouseHandler {
 
     public void updateMouse() {
         if (!virtualMouseEnabled) return;
-        //? if >=1.21.2 {
-        float delta = minecraft.getDeltaTracker().getRealtimeDeltaTicks();
-        //?} elif >1.20.6 {
-        /*float delta = minecraft.getTimer().getRealtimeDeltaTicks();
-        *///?} else {
+        /*? if >1.20.6 {*/
+        float delta = minecraft.getTimer().getRealtimeDeltaTicks();
+        /*?} else {*/
         /*float delta = minecraft.getDeltaFrameTime();
-        *///?}
+        *//*?}*/
 
         if (Math.round(targetX * 100) / 100.0 != Math.round(currentX * 100) / 100.0 || Math.round(targetY * 100) / 100.0 != Math.round(currentY * 100) / 100.0) {
             currentX = Mth.lerp(delta, currentX, targetX);
@@ -354,7 +355,7 @@ public class VirtualMouseHandler {
         graphics.pose().scale(0.5f, 0.5f, 0.5f);
 
         RenderSystem.enableBlend();
-        Blit.blitTex(graphics, CURSOR_TEXTURE, -16, -16, 0, 0, 32, 32, 32, 32);
+        graphics.blit(CURSOR_TEXTURE, -16, -16, 0, 0, 32, 32, 32, 32);
         RenderSystem.disableBlend();
 
         graphics.pose().popPose();
@@ -471,10 +472,5 @@ public class VirtualMouseHandler {
 
     public int getCurrentY(float deltaTime) {
         return (int) Mth.lerp(deltaTime, currentY, targetY);
-    }
-
-    public void preventScrollingThisTick() {
-        scrollX = 0;
-        scrollY = 0;
     }
 }
