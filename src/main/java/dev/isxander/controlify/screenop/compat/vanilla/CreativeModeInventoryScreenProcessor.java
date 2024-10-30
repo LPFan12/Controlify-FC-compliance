@@ -11,14 +11,13 @@ import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.CreativeModeTab;
 
 import java.util.List;
-import java.util.function.Predicate;
 import java.util.function.Supplier;
 
 public class CreativeModeInventoryScreenProcessor extends AbstractContainerScreenProcessor<CreativeModeInventoryScreen> {
     private final CreativeTabHelper tabHelper;
 
-    public CreativeModeInventoryScreenProcessor(CreativeModeInventoryScreen screen, Supplier<Slot> hoveredSlot, ClickSlotFunction clickSlotFunction, Predicate<ControllerEntity> itemSlotAction) {
-        super(screen, hoveredSlot, clickSlotFunction, itemSlotAction);
+    public CreativeModeInventoryScreenProcessor(CreativeModeInventoryScreen screen, Supplier<Slot> hoveredSlot, ClickSlotFunction clickSlotFunction) {
+        super(screen, hoveredSlot, clickSlotFunction);
         this.tabHelper = PlatformClientUtil.createCreativeTabHelper(screen);
     }
 

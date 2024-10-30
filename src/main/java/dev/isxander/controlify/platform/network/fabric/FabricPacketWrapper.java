@@ -2,7 +2,6 @@
 package dev.isxander.controlify.platform.network.fabric;
 
 import dev.isxander.controlify.platform.network.ControlifyPacketCodec;
-import dev.isxander.controlify.platform.network.PacketPayload;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
 
@@ -48,7 +47,7 @@ public class FabricPacketWrapper<T> {
         *//*?}*/
     }
 
-    public class FabricPacketPayloadWrapper implements PacketPayload {
+    public class FabricPacketPayloadWrapper implements /*? if >1.20.4 {*/ CustomPacketPayload /*?} else {*/ /*FabricPacket *//*?}*/ {
         public final T payload;
 
         public FabricPacketPayloadWrapper(T payload) {

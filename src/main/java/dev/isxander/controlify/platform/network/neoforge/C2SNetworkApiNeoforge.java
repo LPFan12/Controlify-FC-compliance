@@ -3,7 +3,6 @@
 
 import dev.isxander.controlify.platform.network.C2SNetworkApi;
 import dev.isxander.controlify.platform.network.ControlifyPacketCodec;
-import dev.isxander.controlify.platform.network.PacketPayload;
 import net.minecraft.resources.ResourceLocation;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModLoadingContext;
@@ -14,11 +13,6 @@ public class C2SNetworkApiNeoforge implements C2SNetworkApi {
     @Override
     public <T> void sendPacket(ResourceLocation channel, T packet) {
         // TODO
-    }
-
-    @Override
-    public <T> PacketPayload createPayload(ResourceLocation channel, T packet) {
-        return null;
     }
 
     @Override

@@ -3,7 +3,6 @@ package dev.isxander.controlify.platform.network.fabric;
 
 import dev.isxander.controlify.platform.network.C2SNetworkApi;
 import dev.isxander.controlify.platform.network.ControlifyPacketCodec;
-import dev.isxander.controlify.platform.network.PacketPayload;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.resources.ResourceLocation;
@@ -26,13 +25,8 @@ public final class C2SNetworkApiFabric implements C2SNetworkApi {
 
     @Override
     public <T> void sendPacket(ResourceLocation channel, T packet) {
-        ClientPlayNetworking.send(createPayload(channel, packet));
-    }
-
-    @Override
-    public <T> PacketPayload createPayload(ResourceLocation channel, T packet) {
         FabricPacketWrapper<T> packetWrapper = getWrapper(channel);
-        return packetWrapper.new FabricPacketPayloadWrapper(packet);
+        ClientPlayNetworking.send(packetWrapper.new FabricPacketPayloadWrapper(packet));
     }
 
     @Override
