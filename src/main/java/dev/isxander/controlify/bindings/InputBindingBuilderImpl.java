@@ -121,10 +121,10 @@ public class InputBindingBuilderImpl implements InputBindingBuilder {
     public InputBindingImpl build(ControllerEntity controller) {
         Validate.isTrue(locked, "Tried to build builder before it was locked.");
 
-        Component name = createDefaultString(controller, null, false);
+        Component name = createDefaultString(null, false);
         if (customName != null) name = customName;
 
-        Component description = createDefaultString(controller, "desc", true);
+        Component description = createDefaultString("desc", true);
         if (customDescription != null) description = customDescription;
         if (description == null) description = Component.empty();
 
@@ -171,23 +171,15 @@ public class InputBindingBuilderImpl implements InputBindingBuilder {
         Validate.isTrue(!locked, "Tried to modify binding builder after is has been locked!");
     }
 
-    private Component createDefaultString(ControllerEntity controller, @Nullable String suffix, boolean notExistToNull) {
+    private Component createDefaultString(@Nullable String suffix, boolean notExistToNull) {
         Objects.requireNonNull(id);
 
-        ResourceLocation type = controller.info().type().namespace();
+        String key = "controlify.binding." + id.getNamespace() + "." + id.getPath();
+        if (suffix != null) key += "." + suffix;
 
-        String typeSpecificKey = type.toLanguageKey("controlify.binding", id.toLanguageKey());
-        if (suffix != null) typeSpecificKey += "." + suffix;
-        if (Language.getInstance().has(typeSpecificKey)) {
-            return Component.translatable(typeSpecificKey);
-        }
-
-        String genericKey = id.toLanguageKey("controlify.binding");
-        if (suffix != null) genericKey += "." + suffix;
-
-        if (notExistToNull && !Language.getInstance().has(genericKey))
+        if (notExistToNull && !Language.getInstance().has(key))
             return null;
 
-        return Component.translatable(genericKey);
+        return Component.translatable(key);
     }
 }

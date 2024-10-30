@@ -15,59 +15,35 @@ public class ControlifyCompat {
 
     public static final String IMMEDIATELY_FAST = "immediatelyfast";
     public static final String SIMPLE_VOICE_CHAT = "voicechat";
-    public static final String FANCY_MENU = "fancymenu";
 
     public static void init() {
         /*? if simple-voice-chat {*/
-        try {
-            wrapCompatCall(
-                    SIMPLE_VOICE_CHAT,
-                    dev.isxander.controlify.compatibility.simplevoicechat.SimpleVoiceChatCompat::init
-            );
-        } catch (NoClassDefFoundError e) {
-            disabledMods.add(SIMPLE_VOICE_CHAT);
-        }
+        wrapCompatCall(
+                SIMPLE_VOICE_CHAT,
+                dev.isxander.controlify.compatibility.simplevoicechat.SimpleVoiceChatCompat::init
+        );
         /*?}*/
-
-        //? if fancy-menu {
-        try {
-            wrapCompatCall(
-                    FANCY_MENU,
-                    dev.isxander.controlify.compatibility.fancymenu.FancyMenuCompat::registerActions
-            );
-        } catch (NoClassDefFoundError e) {
-            disabledMods.add(FANCY_MENU);
-        }
-        //?}
     }
 
     public static void ifBeginHudBatching() {
         /*? if immediately-fast {*/
-        try {
-            wrapCompatCall(
-                    IMMEDIATELY_FAST,
-                    dev.isxander.controlify.compatibility.immediatelyfast.ImmediatelyFastCompat::beginHudBatching
-            );
-        } catch (NoClassDefFoundError e) {
-            disabledMods.add(IMMEDIATELY_FAST);
-        }
+        wrapCompatCall(
+                IMMEDIATELY_FAST,
+                dev.isxander.controlify.compatibility.immediatelyfast.ImmediatelyFastCompat::beginHudBatching
+        );
         /*?}*/
     }
 
     public static void ifEndHudBatching() {
         /*? if immediately-fast {*/
-        try {
-            wrapCompatCall(
-                    IMMEDIATELY_FAST,
-                    dev.isxander.controlify.compatibility.immediatelyfast.ImmediatelyFastCompat::endHudBatching
-            );
-        } catch (NoClassDefFoundError e) {
-            disabledMods.add(IMMEDIATELY_FAST);
-        }
+        wrapCompatCall(
+                IMMEDIATELY_FAST,
+                dev.isxander.controlify.compatibility.immediatelyfast.ImmediatelyFastCompat::endHudBatching
+        );
         /*?}*/
     }
 
-    private static void wrapCompatCall(String modid, Runnable runnable) throws NoClassDefFoundError {
+    private static void wrapCompatCall(String modid, Runnable runnable) {
         if (modsLoaded.apply(modid) && !disabledMods.contains(modid)) {
             try {
                 runnable.run();
