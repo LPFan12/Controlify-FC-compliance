@@ -10,7 +10,7 @@ import java.util.Optional;
 public interface ECSEntity {
     Map<ResourceLocation, ECSComponent> getAllComponents();
 
-    <T extends ECSComponent> boolean setComponent(T component);
+    <T extends ECSComponent> boolean setComponent(T component, ResourceLocation id);
 
     boolean removeComponent(ResourceLocation id);
 

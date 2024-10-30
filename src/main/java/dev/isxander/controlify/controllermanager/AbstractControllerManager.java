@@ -5,8 +5,6 @@ import dev.isxander.controlify.Controlify;
 import dev.isxander.controlify.api.event.ControlifyEvents;
 import dev.isxander.controlify.controller.ControllerEntity;
 import dev.isxander.controlify.driver.Driver;
-import dev.isxander.controlify.driver.steamdeck.SteamDeckMode;
-import dev.isxander.controlify.driver.steamdeck.SteamDeckUtil;
 import dev.isxander.controlify.hid.ControllerHIDService;
 import dev.isxander.controlify.hid.HIDDevice;
 import dev.isxander.controlify.hid.HIDIdentifier;
@@ -35,6 +33,7 @@ public abstract class AbstractControllerManager implements ControllerManager {
     protected final Map<String, ControllerEntity> controllersByUid = new Object2ObjectOpenHashMap<>();
     protected final Map<String, ControllerHIDService.ControllerHIDInfo> hidInfoByUid = new Object2ObjectOpenHashMap<>();
 
+    protected final Map<String, Driver> driversByUid = new Object2ObjectOpenHashMap<>();
 
     public AbstractControllerManager() {
         this.controlify = Controlify.instance();
@@ -55,13 +54,6 @@ public abstract class AbstractControllerManager implements ControllerManager {
                 return Optional.empty();
             }
 
-            if (hidInfo.type().isSteamDeck()) {
-                if (!SteamDeckUtil.DECK_MODE.isGamingMode()) {
-                    CUtil.LOGGER.warn("Preventing load of controller #{} because Steam Deck is not in gaming mode.", ucid);
-                    return Optional.empty();
-                }
-            }
-
             return createController(ucid, hidInfo);
         } catch (Throwable e) {
             CUtil.LOGGER.error("Failed to create controller #{}!", ucid, e);
@@ -80,9 +72,9 @@ public abstract class AbstractControllerManager implements ControllerManager {
 
     @Override
     public void tick(boolean outOfFocus) {
-        for (ControllerEntity controller : controllersByUid.values()) {
-            controller.drivers().forEach(d -> d.update(controller, outOfFocus));
-            ControlifyEvents.CONTROLLER_STATE_UPDATE.invoke(new ControlifyEvents.ControllerStateUpdate(controller));
+        for (Driver driver : driversByUid.values()) {
+            driver.update(outOfFocus);
+            ControlifyEvents.CONTROLLER_STATE_UPDATE.invoke(new ControlifyEvents.ControllerStateUpdate(driver.getController()));
         }
     }
 
@@ -97,7 +89,7 @@ public abstract class AbstractControllerManager implements ControllerManager {
     protected void onControllerRemoved(ControllerEntity controller) {
         CUtil.LOGGER.info("Controller disconnected: {}", ControllerUtils.createControllerString(controller));
 
-        closeController(controller.info().uid());
+        removeController(controller.info().uid());
 
         ControlifyEvents.CONTROLLER_DISCONNECTED.invoke(new ControlifyEvents.ControllerDisconnected(controller));
     }
@@ -113,22 +105,24 @@ public abstract class AbstractControllerManager implements ControllerManager {
         return newController;
     }
 
-    protected void addController(UniqueControllerID ucid, ControllerEntity controller) {
+    protected void addController(UniqueControllerID ucid, ControllerEntity controller, Driver driver) {
         controllersByUid.put(controller.info().uid(), controller);
         controllersByJid.put(ucid, controller);
+        driversByUid.put(controller.info().uid(), driver);
+    }
+
+    protected void removeController(String uid) {
+        ControllerEntity controller = controllersByUid.remove(uid);
+        controllersByJid.remove(controller.info().ucid());
+        Optional.ofNullable(hidInfoByUid.remove(uid))
+                .ifPresent(controlify.controllerHIDService()::unconsumeController);
+        closeController(uid);
+        driversByUid.remove(uid);
     }
 
     @Override
     public void closeController(String uid) {
-        ControllerEntity controller = controllersByUid.remove(uid);
-
-        if (controller == null) return;
-
-        controller.close();
-
-        controllersByJid.remove(controller.info().ucid());
-        Optional.ofNullable(hidInfoByUid.remove(uid))
-                .ifPresent(controlify.controllerHIDService()::unconsumeController);
+        driversByUid.get(uid).close();
     }
 
     @Override
@@ -143,13 +137,13 @@ public abstract class AbstractControllerManager implements ControllerManager {
 
     protected int getControllerCountWithMatchingHID(HIDIdentifier hid) {
         return (int) controllersByJid.values().stream()
-                .filter(c -> c.info().hid().isPresent() && c.info().hid().get().asIdentifier().equals(hid))
+                .filter(c -> c.info().hid().equals(Optional.ofNullable(hid)))
                 .count();
     }
 
     @Override
     public void close() {
-        controllersByUid.values().forEach(ControllerEntity::close);
+        driversByUid.values().forEach(Driver::close);
     }
 
     protected abstract void loadGamepadMappings(ResourceProvider resourceProvider);

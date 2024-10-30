@@ -27,11 +27,6 @@ public class GyroComponent implements ECSComponent, ConfigHolder<GyroComponent.C
         return this.config;
     }
 
-    @Override
-    public ResourceLocation id() {
-        return ID;
-    }
-
     public static class Config implements ConfigClass {
         public boolean calibrated = false;
         public boolean delayedCalibration = false;
@@ -40,7 +35,7 @@ public class GyroComponent implements ECSComponent, ConfigHolder<GyroComponent.C
 
         public boolean relativeGyroMode = false;
 
-        public GyroButtonMode requiresButton = GyroButtonMode.ON;
+        public boolean requiresButton = true;
 
         public GyroYawMode yawMode = GyroYawMode.YAW;
 

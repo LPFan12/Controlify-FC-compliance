@@ -124,36 +124,44 @@ public sealed interface MappingEntry {
     }
 
     sealed interface FromNothing extends MappingEntry {
-        record ToButton(ResourceLocation to, boolean state, MapType inputType, MapType outputType) implements FromNothing {
-            public ToButton(ResourceLocation to, boolean state) {
-                this(to, state, MapType.NOTHING, MapType.BUTTON);
-            }
+        @Override
+        default MapType inputType() {
+            return MapType.NOTHING;
+        }
 
+        record ToButton(ResourceLocation to, boolean state) implements FromNothing {
             @Override
             public void apply(ControllerState oldState, ModifiableControllerState newState) {
                 newState.setButton(to, state);
             }
+
+            @Override
+            public MapType outputType() {
+                return MapType.BUTTON;
+            }
         }
 
-        record ToAxis(ResourceLocation to, float state, MapType inputType, MapType outputType) implements FromNothing {
-            public ToAxis(ResourceLocation to, float state) {
-                this(to, state, MapType.NOTHING, MapType.AXIS);
-            }
-
+        record ToAxis(ResourceLocation to, float state) implements FromNothing {
             @Override
             public void apply(ControllerState oldState, ModifiableControllerState newState) {
                 newState.setAxis(to, state);
             }
+
+            @Override
+            public MapType outputType() {
+                return MapType.AXIS;
+            }
         }
 
-        record ToHat(ResourceLocation to, MapType inputType, MapType outputType) implements FromNothing {
-            public ToHat(ResourceLocation to) {
-                this(to, MapType.NOTHING, MapType.HAT);
-            }
-
+        record ToHat(ResourceLocation to) implements FromNothing {
             @Override
             public void apply(ControllerState oldState, ModifiableControllerState newState) {
                 newState.setHat(to, HatState.CENTERED);
+            }
+
+            @Override
+            public MapType outputType() {
+                return MapType.HAT;
             }
         }
     }

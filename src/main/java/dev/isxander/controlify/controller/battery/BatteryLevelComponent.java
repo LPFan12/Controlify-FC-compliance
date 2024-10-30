@@ -16,9 +16,4 @@ public class BatteryLevelComponent implements ECSComponent {
     public void setBatteryLevel(PowerState batteryLevel) {
         this.batteryLevel = batteryLevel;
     }
-
-    @Override
-    public ResourceLocation id() {
-        return ID;
-    }
 }

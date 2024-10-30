@@ -138,11 +138,6 @@ public class InputComponent implements ECSComponent, ConfigHolder<InputComponent
         return this.config;
     }
 
-    @Override
-    public ResourceLocation id() {
-        return ID;
-    }
-
     private void updateDeadzoneView() {
         this.deadzoneStateNow = new DeadzoneControllerStateView(this.stateNow, this);
         this.deadzoneStateThen = new DeadzoneControllerStateView(this.stateThen, this);

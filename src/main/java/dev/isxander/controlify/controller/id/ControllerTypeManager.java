@@ -18,6 +18,7 @@ import net.minecraft.Util;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.Resource;
 import net.minecraft.server.packs.resources.ResourceManager;
+import net.minecraft.util.profiling.ProfilerFiller;
 import org.quiltmc.parsers.json.JsonReader;
 
 import java.io.BufferedReader;
@@ -49,7 +50,7 @@ public class ControllerTypeManager implements SimpleControlifyReloadListener<Con
     }
 
     @Override
-    public CompletableFuture<Preparations> load(ResourceManager manager, Executor executor) {
+    public CompletableFuture<Preparations> load(ResourceManager manager, ProfilerFiller profiler, Executor executor) {
         return CompletableFuture.supplyAsync(() -> manager.getResourceStack(CUtil.rl("controllers/controller_identification.json5")), executor)
                 .thenCompose(resources -> {
                     List<CompletableFuture<List<Map.Entry<HIDIdentifier, ControllerType>>>> futures = new ArrayList<>();
@@ -90,7 +91,7 @@ public class ControllerTypeManager implements SimpleControlifyReloadListener<Con
     }
 
     @Override
-    public CompletableFuture<Void> apply(Preparations data, ResourceManager manager, Executor executor) {
+    public CompletableFuture<Void> apply(Preparations data, ResourceManager manager, ProfilerFiller profiler, Executor executor) {
         return CompletableFuture.runAsync(() -> {
             this.typeMap = data.typeMap();
             triggerFullTypeReload();

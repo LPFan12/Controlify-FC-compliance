@@ -22,23 +22,24 @@ public class GLFWGamepadDriver implements Driver {
     private final int jid;
     private final String guid;
 
-    private InputComponent inputComponent;
+    private final ControllerEntity controller;
 
-    public GLFWGamepadDriver(int jid) {
+    public GLFWGamepadDriver(int jid, ControllerType type, String uid, UniqueControllerID ucid, Optional<HIDDevice> hid) {
         this.jid = jid;
         this.guid = glfwGetJoystickGUID(jid);
 
         this.getGamepadState(); // test input ability so the create catches it
+
+        ControllerInfo info = new ControllerInfo(uid, ucid, this.guid, glfwGetGamepadName(jid), type, hid);
+        this.controller = new ControllerEntity(info);
+
+        this.controller.setComponent(new InputComponent(this.controller, 15, 10, 0, true, GamepadInputs.DEADZONE_GROUPS, type.mappingId()), InputComponent.ID);
+
+        this.controller.finalise();
     }
 
     @Override
-    public void addComponents(ControllerEntity controller) {
-        controller.setComponent(this.inputComponent = new InputComponent(controller, 15, 10, 0, true, GamepadInputs.DEADZONE_GROUPS, controller.info().type().mappingId()));
-
-    }
-
-    @Override
-    public void update(ControllerEntity controller, boolean outOfFocus) {
+    public void update(boolean outOfFocus) {
         this.updateInput();
     }
 
@@ -48,15 +49,15 @@ public class GLFWGamepadDriver implements Driver {
     }
 
     @Override
-    public String getDriverName() {
-        return glfwGetGamepadName(jid);
+    public ControllerEntity getController() {
+        return this.controller;
     }
 
     private void updateInput() {
         GLFWGamepadState glfwState = this.getGamepadState();
         ControllerStateImpl state = new ControllerStateImpl();
 
-        state.setAxis(GamepadInputs.LEFT_STICK_AXIS_DOWN, positiveAxis(glfwState.axes(GLFW.GLFW_GAMEPAD_AXIS_LEFT_Y)));
+        state.setAxis(GamepadInputs.LEFT_STICK_AXIS_DOWN, positiveAxis(glfwState.axes(org.lwjgl.glfw.GLFW.GLFW_GAMEPAD_AXIS_LEFT_Y)));
         state.setAxis(GamepadInputs.LEFT_STICK_AXIS_RIGHT, positiveAxis(glfwState.axes(GLFW.GLFW_GAMEPAD_AXIS_LEFT_X)));
         state.setAxis(GamepadInputs.LEFT_STICK_AXIS_UP, negativeAxis(glfwState.axes(GLFW.GLFW_GAMEPAD_AXIS_LEFT_Y)));
         state.setAxis(GamepadInputs.LEFT_STICK_AXIS_LEFT, negativeAxis(glfwState.axes(GLFW.GLFW_GAMEPAD_AXIS_LEFT_X)));
@@ -89,7 +90,7 @@ public class GLFWGamepadDriver implements Driver {
         state.setButton(GamepadInputs.DPAD_LEFT_BUTTON, glfwState.buttons(GLFW.GLFW_GAMEPAD_BUTTON_DPAD_LEFT) == GLFW.GLFW_PRESS);
         state.setButton(GamepadInputs.DPAD_RIGHT_BUTTON, glfwState.buttons(GLFW.GLFW_GAMEPAD_BUTTON_DPAD_RIGHT) == GLFW.GLFW_PRESS);
 
-        this.inputComponent.pushState(state);
+        this.controller.<InputComponent>getComponent(InputComponent.ID).orElseThrow().pushState(state);
     }
 
     private GLFWGamepadState getGamepadState() {
