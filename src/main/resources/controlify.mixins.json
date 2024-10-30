@@ -2,7 +2,6 @@
   "package": "dev.isxander.controlify.mixins",
   "required": true,
   "minVersion": "0.8",
-  "minMixinExtrasVersion": "0.5.0-beta.1",
   "injectors": {
     "defaultRequire": 1
   },
@@ -10,13 +9,13 @@
   "client": [
     "core.ClientPacketListenerMixin",
     "core.GLXMixin",
+    "core.GuiGraphicsAccessor",
     "core.GuiMixin",
     "core.KeyboardHandlerMixin",
     "core.MinecraftMixin",
     "core.MouseHandlerMixin",
     "feature.accessibility.LocalPlayerMixin",
-    "feature.autoswitch.SystemToastAccessor",
-    "feature.autoswitch.ToastManagerAccessor",
+    "feature.autoswitch.ToastComponentAccessor",
     "feature.bind.ClientPacketListenerMixin",
     "feature.bind.GuiMixin",
     "feature.bind.KeyMappingMixin",
@@ -64,15 +63,16 @@
     "feature.screenop.vanilla.AbstractButtonMixin",
     "feature.screenop.vanilla.AbstractContainerEventHandlerMixin",
     "feature.screenop.vanilla.AbstractContainerScreenMixin",
-    "feature.screenop.vanilla.AbstractRecipeBookScreenMixin",
+    "feature.screenop.vanilla.AbstractFurnaceScreenMixin",
     "feature.screenop.vanilla.AbstractSelectionListMixin",
     "feature.screenop.vanilla.AbstractSignEditScreenMixin",
     "feature.screenop.vanilla.AbstractSliderButtonMixin",
-    "feature.screenop.vanilla.bundle.BundleMouseActionsMixin",
     "feature.screenop.vanilla.ContainerObjectSelectionListEntryMixin",
+    "feature.screenop.vanilla.CraftingScreenMixin",
     "feature.screenop.vanilla.CreateWorldScreenMixin",
     "feature.screenop.vanilla.CreativeModeInventoryScreenMixin",
     "feature.screenop.vanilla.EditBoxMixin",
+    "feature.screenop.vanilla.InventoryScreenMixin",
     "feature.screenop.vanilla.JoinMultiplayerScreenAccessor",
     "feature.screenop.vanilla.JoinMultiplayerScreenMixin",
     "feature.screenop.vanilla.LanguageSelectionListEntryMixin",
@@ -86,7 +86,6 @@
     "feature.screenop.vanilla.TitleScreenMixin",
     "feature.screenop.vanilla.WorldSelectionListEntryMixin",
     "feature.settingsbutton.ControlsScreenMixin",
-    "feature.steamdeck.ScreenshotAccessor",
     "feature.util.ConnectScreenMixin",
     "feature.virtualmouse.InputConstantsMixin",
     "feature.virtualmouse.KeyboardHandlerAccessor",
@@ -94,14 +93,15 @@
     "feature.virtualmouse.MouseHandlerAccessor",
     "feature.virtualmouse.MouseHandlerMixin",
     "feature.virtualmouse.snapping.AbstractContainerScreenMixin",
-    "feature.virtualmouse.snapping.AbstractRecipeBookScreenMixin",
+    "feature.virtualmouse.snapping.AbstractFurnaceScreenMixin",
+    "feature.virtualmouse.snapping.CraftingScreenMixin",
     "feature.virtualmouse.snapping.CreativeModeInventoryScreenMixin",
+    "feature.virtualmouse.snapping.InventoryScreenMixin",
     "feature.virtualmouse.snapping.RecipeBookComponentAccessor",
     "feature.virtualmouse.snapping.RecipeBookPageAccessor",
     "feature.virtualmouse.snapping.ScreenMixin"
   ],
   "mixins": [
-    "feature.font.TranslatableContentsMixin",
-    "feature.guide.ingame.PlayerAccessor"
+    "feature.font.TranslatableContentsMixin"
   ]
 }
