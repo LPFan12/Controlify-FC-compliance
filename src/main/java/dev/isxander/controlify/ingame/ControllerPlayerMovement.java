@@ -5,17 +5,12 @@ import dev.isxander.controlify.bindings.ControlifyBindings;
 import dev.isxander.controlify.api.bind.InputBinding;
 import dev.isxander.controlify.controller.ControllerEntity;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.player.Input;
 import net.minecraft.client.player.KeyboardInput;
 import net.minecraft.client.player.LocalPlayer;
 import org.jetbrains.annotations.Nullable;
-//? if >=1.21.2 {
-import net.minecraft.client.player.ClientInput;
-import net.minecraft.world.entity.player.Input;
-//?} else {
-/*import net.minecraft.client.player.Input;
-*///?}
 
-public class ControllerPlayerMovement extends /*? if >=1.21.2 {*/ ClientInput /*?} else {*/ /*Input *//*?}*/ {
+public class ControllerPlayerMovement extends Input {
     private final ControllerEntity controller;
     private final LocalPlayer player;
     private boolean wasFlying, wasPassenger;
@@ -28,20 +23,14 @@ public class ControllerPlayerMovement extends /*? if >=1.21.2 {*/ ClientInput /*
     @Override
     public void tick(boolean slowDown, float movementMultiplier) {
         if (Minecraft.getInstance().screen != null || player == null) {
-            this.leftImpulse = 0;
-            this.forwardImpulse = 0;
-
-            //? if >=1.21.2 {
-            this.keyPresses = Input.EMPTY;
-            //?} else {
-            /*this.up = false;
+            this.up = false;
             this.down = false;
             this.left = false;
             this.right = false;
+            this.leftImpulse = 0;
+            this.forwardImpulse = 0;
             this.jumping = false;
             this.shiftKeyDown = false;
-            *///?}
-
             return;
         }
 
@@ -57,16 +46,10 @@ public class ControllerPlayerMovement extends /*? if >=1.21.2 {*/ ClientInput /*
             this.leftImpulse = Math.abs(this.leftImpulse) >= threshold ? Math.copySign(1, this.leftImpulse) : 0;
         }
 
-        //? if >=1.21.2 {
-        boolean up, down, left, right;
-        boolean shiftKeyDown = keyPresses.shift();
-        boolean jumping = keyPresses.jump();
-        //?}
-
-        up = this.forwardImpulse > 0;
-        down = this.forwardImpulse < 0;
-        left = this.leftImpulse > 0;
-        right = this.leftImpulse < 0;
+        this.up = this.forwardImpulse > 0;
+        this.down = this.forwardImpulse < 0;
+        this.left = this.leftImpulse > 0;
+        this.right = this.leftImpulse < 0;
 
         if (slowDown) {
             this.leftImpulse *= movementMultiplier;
@@ -76,30 +59,24 @@ public class ControllerPlayerMovement extends /*? if >=1.21.2 {*/ ClientInput /*
         // this over-complication is so exiting a GUI with the button still held doesn't trigger a jump.
         InputBinding jump = ControlifyBindings.JUMP.on(controller);
         if (jump.justPressed())
-            jumping = true;
+            this.jumping = true;
         if (!jump.digitalNow())
-            jumping = false;
+            this.jumping = false;
 
         InputBinding sneak = ControlifyBindings.SNEAK.on(controller);
         if (player.getAbilities().flying || (player.isInWater() && !player.onGround()) || player.getVehicle() != null || !controller.genericConfig().config().toggleSneak) {
             if (sneak.justPressed())
-                shiftKeyDown = true;
+                this.shiftKeyDown = true;
             if (!sneak.digitalNow())
-                shiftKeyDown = false;
+                this.shiftKeyDown = false;
         } else {
             if (sneak.justPressed()) {
-                shiftKeyDown = !shiftKeyDown;
+                this.shiftKeyDown = !this.shiftKeyDown;
             }
         }
         if ((!player.getAbilities().flying && wasFlying && player.onGround()) || (!player.isPassenger() && wasPassenger)) {
-            shiftKeyDown = false;
+            this.shiftKeyDown = false;
         }
-
-        //? if >=1.21.2 {
-        boolean sprinting = ControlifyBindings.SPRINT.on(controller).digitalNow();
-
-        this.keyPresses = new Input(up, down, left, right, jumping, shiftKeyDown, sprinting);
-        //?}
 
         this.wasFlying = player.getAbilities().flying;
         this.wasPassenger = player.isPassenger();

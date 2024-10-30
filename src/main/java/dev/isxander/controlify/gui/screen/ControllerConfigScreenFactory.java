@@ -8,13 +8,11 @@ import dev.isxander.controlify.api.bind.InputBindingSupplier;
 import dev.isxander.controlify.bindings.input.EmptyInput;
 import dev.isxander.controlify.bindings.input.Input;
 import dev.isxander.controlify.controller.*;
-import dev.isxander.controlify.controller.gyro.GyroButtonMode;
 import dev.isxander.controlify.controller.gyro.GyroComponent;
 import dev.isxander.controlify.controller.gyro.GyroYawMode;
 import dev.isxander.controlify.controller.input.DeadzoneGroup;
 import dev.isxander.controlify.controller.input.InputComponent;
 import dev.isxander.controlify.controller.input.Inputs;
-import dev.isxander.controlify.controller.keyboard.NativeKeyboardComponent;
 import dev.isxander.controlify.controller.rumble.RumbleComponent;
 import dev.isxander.controlify.gui.controllers.BindController;
 import dev.isxander.controlify.gui.controllers.Deadzone2DImageRenderer;
@@ -233,19 +231,14 @@ public class ControllerConfigScreenFactory {
                         .binding(def.showScreenGuides, () -> config.showScreenGuides, v -> config.showScreenGuides = v)
                         .controller(TickBoxControllerBuilder::create)
                         .build())
-                .option(Option.<OnScreenKeyboardMode>createBuilder()
+                .option(Option.<Boolean>createBuilder()
                         .name(Component.translatable("controlify.gui.show_keyboard"))
                         .description(OptionDescription.createBuilder()
                                 .text(Component.translatable("controlify.gui.show_keyboard.tooltip"))
                                 .build())
-                        .binding(
-                                OnScreenKeyboardMode.getForController(controller),
-                                () -> OnScreenKeyboardMode.getForController(controller),
-                                v -> v.setForController(controller)
-                        )
-                        .controller(opt -> CyclingListControllerBuilder.create(opt)
-                                .values(OnScreenKeyboardMode.valuesForController(controller))
-                                .formatValue(OnScreenKeyboardMode::getDisplayName))
+                        .binding(def.showOnScreenKeyboard, () -> config.showOnScreenKeyboard, v -> config.showOnScreenKeyboard = v)
+                        .available(def.showOnScreenKeyboard) // default is if the OS supports it
+                        .controller(TickBoxControllerBuilder::create)
                         .build())
                 .build());
     }
@@ -524,18 +517,22 @@ public class ControllerConfigScreenFactory {
             return opt;
         }));
         gyroGroup.option(Util.make(() -> {
-            var opt = Option.<GyroButtonMode>createBuilder()
+            var opt = Option.<Boolean>createBuilder()
                     .name(Component.translatable("controlify.gui.gyro_requires_button"))
-                    .description(val -> OptionDescription.createBuilder()
+                    .description(OptionDescription.createBuilder()
                             .text(Component.translatable("controlify.gui.gyro_requires_button.tooltip"))
-                            .text(val == GyroButtonMode.ON ? Component.translatable("controlify.gui.gyro_requires_button.tooltip.on") : Component.empty())
-                            .text(val == GyroButtonMode.INVERT ? Component.translatable("controlify.gui.gyro_requires_button.tooltip.invert") : Component.empty())
-                            .text(val == GyroButtonMode.TOGGLE ? Component.translatable("controlify.gui.gyro_requires_button.tooltip.toggle") : Component.empty())
-                            .text(val == GyroButtonMode.OFF ? Component.translatable("controlify.gui.gyro_requires_button.tooltip.off") : Component.empty())
                             .build())
                     .binding(def.requiresButton, () -> config.requiresButton, v -> config.requiresButton = v)
-                    .controller(controllerOpt -> EnumControllerBuilder.create(controllerOpt).enumClass(GyroButtonMode.class))
+                    .controller(TickBoxControllerBuilder::create)
                     .available(gyroSensitivity.pendingValue() > 0)
+                    .listener((o, val) -> {
+                        if (val) {
+                            relativeModeOpt.setAvailable(gyroSensitivity.pendingValue() > 0);
+                        } else {
+                            relativeModeOpt.setAvailable(false);
+                            relativeModeOpt.requestSet(false);
+                        }
+                    })
                     .build();
             gyroOptions.add(opt);
             return opt;
@@ -706,61 +703,5 @@ public class ControllerConfigScreenFactory {
     }
 
     private record OptionBindPair(Option<?> option, InputBinding binding) {
-    }
-
-    private enum OnScreenKeyboardMode implements NameableEnum {
-        OFF("controlify.gui.show_keyboard.off"),
-        CONTROLIFY("controlify.gui.show_keyboard.controlify"),
-        SYSTEM("controlify.gui.show_keyboard.system");
-
-        public static OnScreenKeyboardMode[] valuesForController(ControllerEntity controller) {
-            if (controller.nativeKeyboard().isPresent()) {
-                return new OnScreenKeyboardMode[]{ OFF, CONTROLIFY, SYSTEM };
-            } else {
-                return new OnScreenKeyboardMode[]{ OFF, CONTROLIFY };
-            }
-        }
-
-        public static OnScreenKeyboardMode getForController(ControllerEntity controller) {
-            if (controller.genericConfig().config().showOnScreenKeyboard) {
-                if (controller.nativeKeyboard().map(nativeKeyboard -> nativeKeyboard.confObj().useNativeKeyboard).orElse(false)) {
-                    return SYSTEM;
-                } else {
-                    return CONTROLIFY;
-                }
-            } else {
-                return OFF;
-            }
-        }
-
-        public void setForController(ControllerEntity controller) {
-            GenericControllerConfig genericConfig = controller.genericConfig().config();
-            Optional<NativeKeyboardComponent.Config> nativeConfig = controller.nativeKeyboard().map(NativeKeyboardComponent::confObj);
-            switch (this) {
-                case OFF -> {
-                    genericConfig.showOnScreenKeyboard = false;
-                    nativeConfig.ifPresent(config -> config.useNativeKeyboard = false);
-                }
-                case CONTROLIFY -> {
-                    genericConfig.showOnScreenKeyboard = true;
-                    nativeConfig.ifPresent(config -> config.useNativeKeyboard = false);
-                }
-                case SYSTEM -> {
-                    genericConfig.showOnScreenKeyboard = true;
-                    nativeConfig.ifPresent(config -> config.useNativeKeyboard = true);
-                }
-            }
-        }
-
-        private final Component displayName;
-
-        OnScreenKeyboardMode(String key) {
-            this.displayName = Component.translatable(key);
-        }
-
-        @Override
-        public Component getDisplayName() {
-            return displayName;
-        }
     }
 }

@@ -6,13 +6,10 @@ import dev.isxander.controlify.api.event.ControlifyEvents;
 import dev.isxander.controlify.bindings.ControlifyBindings;
 import dev.isxander.controlify.controller.gyro.GyroState;
 import dev.isxander.controlify.controller.ControllerEntity;
-import dev.isxander.controlify.controller.gyro.GyroButtonMode;
 import dev.isxander.controlify.controller.gyro.GyroComponent;
 import dev.isxander.controlify.controller.input.InputComponent;
-import dev.isxander.controlify.driver.steamdeck.SteamDeckDriver;
 import dev.isxander.controlify.gui.screen.RadialItems;
 import dev.isxander.controlify.gui.screen.RadialMenuScreen;
-import dev.isxander.controlify.mixins.feature.steamdeck.ScreenshotAccessor;
 import dev.isxander.controlify.server.ServerPolicies;
 import dev.isxander.controlify.utils.ControllerUtils;
 import dev.isxander.controlify.utils.DebugOverlayHelper;
@@ -30,13 +27,10 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.game.ServerboundPlayerActionPacket;
 import net.minecraft.util.Mth;
 import net.minecraft.world.InteractionHand;
-import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
 import org.joml.Vector2f;
 import org.joml.Vector2fc;
-
-import java.io.File;
 
 public class InGameInputHandler {
     private final ControllerEntity controller;
@@ -45,7 +39,6 @@ public class InGameInputHandler {
 
     private double lookInputX, lookInputY; // in degrees per tick
     private final GyroState gyroInput = new GyroState();
-    private boolean gyroToggledOn;
     private boolean wasAiming;
     private Animation flickAnimation;
 
@@ -59,19 +52,14 @@ public class InGameInputHandler {
         this.minecraft = Minecraft.getInstance();
         this.controlify = Controlify.instance();
         this.dropRepeatHelper = new HoldRepeatHelper(20, 1);
-        this.gyroToggledOn = false;
     }
 
     public void inputTick() {
-        boolean isController = ControllerPlayerMovement.shouldBeControllerInput();
+        handlePlayerLookInput();
+        handleKeybinds();
+        preventFlyDrifting();
 
-        handlePlayerLookInput(isController);
         ControllerPlayerMovement.ensureCorrectInput(minecraft.player);
-
-        if (isController) {
-            handleKeybinds();
-            preventFlyDrifting();
-        }
     }
 
     protected void handleKeybinds() {
@@ -82,21 +70,11 @@ public class InGameInputHandler {
             minecraft.pauseGame(false);
         }
         if (minecraft.player != null) {
-            Inventory inventory = minecraft.player.getInventory();
-
             if (ControlifyBindings.NEXT_SLOT.on(controller).justPressed()) {
-                //? if >=1.21.2 {
-                inventory.setSelectedHotbarSlot((inventory.selected + 1) % Inventory.getSelectionSize());
-                //?} else {
-                /*minecraft.player.getInventory().swapPaint(-1);
-                *///?}
+                minecraft.player.getInventory().swapPaint(-1);
             }
             if (ControlifyBindings.PREV_SLOT.on(controller).justPressed()) {
-                //? if >=1.21.2 {
-                inventory.setSelectedHotbarSlot((inventory.selected - 1 + Inventory.getSelectionSize()) % Inventory.getSelectionSize());
-                //?} else {
-                /*minecraft.player.getInventory().swapPaint(1);
-                *///?}
+                minecraft.player.getInventory().swapPaint(1);
             }
 
             if (!minecraft.player.isSpectator()) {
@@ -181,22 +159,10 @@ public class InGameInputHandler {
         }
 
         if (ControlifyBindings.TAKE_SCREENSHOT.on(controller).justPressed()) {
-            // get file before it takes and writes the screenshot (which changes the next name)
-            File screenshotFile = ScreenshotAccessor.invokeGetFile(
-                    new File(minecraft.gameDirectory, "screenshots")
-            );
-
             Screenshot.grab(
                     this.minecraft.gameDirectory,
                     this.minecraft.getMainRenderTarget(),
-                    component -> this.minecraft.execute(() -> {
-                        this.minecraft.gui.getChat().addMessage(component);
-
-                        // TODO: this currently does not work, yet to debug why not
-                        SteamDeckDriver.getDeck().ifPresent(deck -> {
-                            deck.doSteamScreenshot(screenshotFile.getAbsoluteFile().toPath(), "");
-                        });
-                    })
+                    component -> this.minecraft.execute(() -> this.minecraft.gui.getChat().addMessage(component))
             );
         }
 
@@ -259,10 +225,14 @@ public class InGameInputHandler {
         }
     }
 
-    protected void handlePlayerLookInput(boolean isController) {
+    protected void handlePlayerLookInput() {
         LocalPlayer player = this.minecraft.player;
 
-        if (!isController || !canProcessLookInput()) {
+        boolean mouseNotGrabbed = !minecraft.mouseHandler.isMouseGrabbed();
+        boolean outOfFocus = !minecraft.isWindowActive() && !controlify.config().globalSettings().outOfFocusInput;
+        boolean screenVisible = minecraft.screen != null;
+        boolean playerExists = minecraft.player != null;
+        if (mouseNotGrabbed || outOfFocus || screenVisible || !playerExists) {
             lookInputX = 0;
             lookInputY = 0;
             return;
@@ -326,23 +296,14 @@ public class InGameInputHandler {
 
     protected void handleGyroLook(GyroComponent gyro, Vector2f impulse, boolean aiming) {
         GyroComponent.Config config = gyro.confObj();
-        var gyroButton = ControlifyBindings.GYRO_BUTTON.on(controller);
 
-        if (config.requiresButton.equals(GyroButtonMode.ON) && (!gyroButton.digitalNow() && !aiming)) {
-            gyroInput.set(0);
-        } else if(config.requiresButton.equals(GyroButtonMode.INVERT) && (gyroButton.digitalNow() && !aiming)) {
-            gyroInput.set(0);
-        } else if(config.requiresButton.equals(GyroButtonMode.TOGGLE) && (!gyroToggledOn && !aiming)) {
+        if (config.requiresButton && (!ControlifyBindings.GYRO_BUTTON.on(controller).digitalNow() && !aiming)) {
             gyroInput.set(0);
         } else {
             if (config.relativeGyroMode)
                 gyroInput.add(new GyroState(gyro.getState()).mul(0.1f));
             else
                 gyroInput.set(gyro.getState());
-        }
-
-        if(config.requiresButton.equals(GyroButtonMode.TOGGLE) && gyroButton.justPressed()) {
-           gyroToggledOn = !gyroToggledOn;
         }
 
         // convert radians per second into degrees per tick
@@ -407,17 +368,9 @@ public class InGameInputHandler {
             double y = motion.y;
             double z = motion.z;
 
-            //? if >=1.21.2 {
-            boolean jumping = player.input.keyPresses.jump();
-            boolean shiftKeyDown = player.input.keyPresses.shift();
-            //?} else {
-            /*boolean jumping = player.input.jumping;
-            boolean shiftKeyDown = player.input.shiftKeyDown;
-            *///?}
-
-            if (!jumping)
+            if (!player.input.jumping)
                 y = Math.min(y, 0);
-            if (!shiftKeyDown)
+            if (!player.input.shiftKeyDown)
                 y = Math.max(y, 0);
 
             if (player.input.forwardImpulse == 0 && player.input.leftImpulse == 0) {
@@ -434,14 +387,5 @@ public class InGameInputHandler {
             case BOW, CROSSBOW, SPEAR, SPYGLASS -> true;
             default -> false;
         };
-    }
-
-    private boolean canProcessLookInput() {
-        boolean mouseNotGrabbed = !minecraft.mouseHandler.isMouseGrabbed() && !controlify.config().globalSettings().outOfFocusInput;
-        boolean outOfFocus = !minecraft.isWindowActive() && !controlify.config().globalSettings().outOfFocusInput;
-        boolean screenVisible = minecraft.screen != null;
-        boolean playerExists = minecraft.player != null;
-
-        return !mouseNotGrabbed && !outOfFocus && !screenVisible && playerExists;
     }
 }
