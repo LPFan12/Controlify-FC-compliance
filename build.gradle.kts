@@ -156,8 +156,6 @@ dependencies {
             }
         }
 
-        // RSO compat
-        modDependency("reesesSodiumOptions", { "me.flashyreese.mods:reeses-sodium-options:$it" })
 
         // iris compat
         modDependency("iris", { "maven.modrinth:iris:$it" }) { runtime ->
