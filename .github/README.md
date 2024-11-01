@@ -2,7 +2,7 @@
 
 Note: This repository currently exists to satisfy the licensing-requirement that I have to open source any changes I make to the binary. All that changes is that I completely removed any compatibility code to Reese's Sodium Options so the game actually runs.(Yes, I had to remove compatibility to ensure compatibility). Why I use Beta 14 as a base? Well, I wanted to use a later version, but appearently later versions are buggy or don't run to begin with. Beta 14 does not contain some of the improvements since then(Like being able to use multiple controllers of the same type concurrently), but it is relatively stable in its default usage and that is what matters. 
 
-Make sure to look at the log if the controller does not respond btw, I had one rogue instance of the mod disabling my controller because lag frames made the mod think there was an error. If it says that it disabled the controller, you have to use your keyboard and mouse to enable again in the controller-settings menu with the "Set" button!
+Make sure to look at the log if the controller does not respond btw, I had one rogue instance of the mod disabling my controller because lag frames made the mod think there was an error. If it says that it disabled the controller, you have to use your keyboard and mouse to enable it again in the controller-settings menu with the "Set" button!
 
 Unmodified original Readme below:
 
